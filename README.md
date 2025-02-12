@@ -27,7 +27,7 @@ Benvenuto nel mio portfolio progetti! 🚀 Qui troverai una selezione di progett
 ## 📫 Contatti
 
 - 📧 Email: fontana.agostino@gmail.com
-- 💼 LinkedIn: [Link al tuo profilo]
-- 🌐 Blog: [Se hai un blog o Medium]
+- 💼 LinkedIn: www.linkedin.com/in/agostino-fontana-75876628
+- 🌐 Blog:
 
 💡 *Questo portfolio è in continuo aggiornamento. Seguimi per rimanere aggiornato sui nuovi progetti!* 🚀
