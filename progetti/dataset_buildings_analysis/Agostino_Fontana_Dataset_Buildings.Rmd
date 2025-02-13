@@ -1,0 +1,595 @@
+---
+r ---
+title: "R Notebook"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    keep_md: yes
+  word_document: default
+---
+
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\--
+
+# **Master II livello "Data science and big data analytics" - Progetto finale del modulo *Statistica***
+
+# Report Analisi statistica Dataset "Buildings1" {#sec-report-analisi-statistica-dataset-buildings1 style="color:black"}
+
+# Agostino Fontana
+
+***N.B. Installare i package relativi ed importare le librerie necessarie per l'esecuzione del codice R sottostante***
+
+```{r}
+library(MLANP)
+library(summarytools)
+library(knitr)
+library(heatmap3)
+library(corrplot)
+library(scatterplot3d)
+library(heatmap3)
+library(factoextra)
+library(ggplot2)
+library(GGally)
+library(plotly)
+library(caret)
+```
+
+## **Analisi del dataset Buildings.**
+
+Il dataset "Buildings1" oggetto di studio è contenuto nel package **MLANP**, quindi si procede all'importazione del dataset nell'ambiente di lavoro ed all'analisi delle varibiali e delle prime righe, per capire la struttura dei dati del dataset oggetto dell'analisi.
+
+```{r}
+data("buildings1")
+dati=buildings1
+attach(dati)
+
+```
+
+```{r paged.print=TRUE}
+head(dati)
+booktabs = TRUE
+```
+
+```{r}
+dim(dati)
+```
+
+Il dataset è composto da 512.872 righe e 18 colonne, così strutturate :
+
+```{r}
+str(dati)
+```
+
+## **Descrizione sommaria dei dati:** {#sec-descrizione-sommaria-dei-dati style="color:black"}
+
+Si tratta di un campione relativo all'osservazione dei consumi orari di energia elettrica in diversi edifici.
+
+Ogni rilevazione, contiene diverse variabili (18) che possono influenzare il consumo di energia.
+
+Ecco una breve spiegazione delle variabili presenti nei dati:
+
+**Dati e Variabili:**
+
+512.872 rilevazioni orarie.
+
+1.  "**timestamp**": Rappresenta l'orario espresso in ore trascorse dal tempo 0 della prima osservazione. Questo può essere utile per analizzare le variazioni di consumo nel corso del tempo.
+
+**Variabili atmosferiche:**
+
+2.  "**air_temperature**": La temperatura dell'aria nell'area circostante all'edificio.
+
+3.  "**cloud_coverage**" : La copertura nuvolosa.
+
+4.  "**dew_temperature**": La temperatura di rugiada.
+
+5.  "**precip_depth_1_hr**" : La profondità delle precipitazioni nell'ultima ora.
+
+6.  "**sea_level_pressure**": La pressione atmosferica al livello del mare.
+
+7.  "**wind_direction**" : La direzione del vento.
+
+8.  **"wind_speed**": La velocità del vento.
+
+**Variabili caratteristiche dell'immobile**
+
+9.  "**building_id**": L'identificativo univoco dell'edificio in cui è stata effettuata la rilevazione.
+
+10. "**meter**": Indica il tipo di consumo di energia, con due tipi possibili: 0 e 3.
+
+11. **"meter_reading**": Rappresenta il consumo orario di energia elettrica.
+
+12. "**primary_use**": Specifica l'uso principale dell'edificio (ad esempio: commerciale, residenziale, industriale, ecc.).
+
+13. **"year_built**": L'anno in cui l'edificio è stato costruito.
+
+14. "**log.meter**": Il logaritmo naturale del consumo di energia (può essere utilizzato al posto dell'originale "meter_reading"\` per analisi statistiche).
+
+15. "**floor.count**": Il numero di piani dell'edificio.
+
+16. "**sq.feet**": La superficie dell'edificio espressa in piedi quadrati.
+
+17. "**hour**" : L'ora della rilevazione.
+
+18. "**day**": Il giorno della rilevazione.
+
+Nella tabella a seguire si osserva un riepilogo delle statistiche descrittive di base per ciascuna variabile.
+
+```{r paged.print=TRUE}
+print(dfSummary(dati,
+                varnumbers   = FALSE, 
+                valid.col    = FALSE, 
+                graph.magnif = 0.90),
+      max.tbl.height = 600,
+      method = 'render'
+)
+```
+
+## **Il problema Statistico** {#sec-il-problema-statistico}
+
+**Il problema statistico che si vuole affrontare riguarda la comprensione di come la variabile "log.meter" dipende dalle altre variabili.**
+
+Ovvero si vuole indagare sul livello d'interdipendenza della variabile ***y=log.meter*** dal resto delle altre variabili, quindi si eseguirà un'analisi di regressione lineare al fine di definire un modello di stima del consumo elettrico in funzione delle altre varibili note (predittori)
+
+![](images/Screenshot%202023-09-26%20alle%2010.27.06.png)
+
+Considerando che la regressione lineare è sensibile agli outliers il chè può portare ad un overfitting del modello, si cercherà quindi la combinazione ottimale di variabili ed in fine si stimerà la bontà del modello individuato intesa in termini di errore quadratico medio. L'RMSE misura l'errore medio delle previsioni del modello rispetto ai dati reali.
+
+Per quanto riguarda gli outliers si valuterà se escluderli o normalizzarli.
+
+1.  Accertato che il dataset non contenga valori mancanti si passerà all'analisi delle variabili.
+
+```{r}
+missing <- length(which(is.na(dati)==T)) 
+print(missing)
+
+
+```
+
+## **Individuazione di eventuali outliers** {#sec-individuazione-di-eventuali-outliers}
+
+Per verificare la presenza di outlier risulta utile analizzare la seguente rappresentazione.
+
+```{r paged.print=TRUE}
+options(repr.plot.width = 10, repr.plot.height = 5) 
+par(mfrow = c(1, 3)) 
+
+# Creo un ciclo for per eseguire un boxplot di ogni variabile numerica. 
+
+for (col_name in colnames(dati)) {
+  if (is.numeric(dati[[col_name]])) {
+    boxplot(dati[[col_name]], 
+            main = col_name, col = "red")
+  }
+}
+
+```
+
+Si noti la presenza di outliers per le variabili : air_temperature, cloud_coverage, precip_depth_1_hr, sea_livel_pressure, wind_speed,year_built, log.meter, pertanto è necessario tenerne conto nelle successive fasi di analisi.
+
+**Trasformazione di Variabili in fattore.**
+
+La variabile "***primary_use***" essendo un classificatore del edificio, è necessario trattarla da fattore, analizzeremo successivamente l'andamento dei consumi nel tempo per tipologia di immobile.
+
+Le variabili ora del giorno e giorno della settimana sono entrambi tipi di dati categorici, non hanno un valore numerico intrinseco in quanto non ha senso dire che le 14:00 è "maggiore" delle 13:00 o che il mercoledì è "maggiore" del martedì pertanto, trattarli come fattori riflette meglio la loro natura. L'andamento delle temperature ed il consumo di energia elettrica può variare in modo regolare in base all'ora del giorno o al giorno della settimana, trattarle come fattori consente di catturare questo comportamento in modo più preciso rispetto a una rappresentazione numerica continua, si valuterà infine il consumo medio di energia per giorno dell'anno.
+
+La variabile ***meter*** essendo un indicatore del tipo di consumo, anch'essa verra trattata come fattore. Anche le variabili ***year_built*** (anno di costruzione) e ***building_id*** (identifica univocamente l'edificio) devono essere trattati cone fattore, pertanto si effettuerà un analisi dell'andamento dei consumi in relazione all'anno di costruzione dell'edificio.
+
+```{r}
+dati$primary_use <- as.factor(dati$primary_use)
+dati$hour<-as.factor(dati$hour)
+dati$day<-as.factor(day%%7)
+dati$meter<-as.factor(meter)
+dati$year_built<-as.factor(year_built)
+dati$building_id<-as.factor(building_id)
+```
+
+A seguire si riporta la struttura del dataset.
+
+```{r echo=TRUE}
+str(dati)
+```
+
+Si effettua quindi un subset del dataframe per escludere : le variabili non numeriche, timestamp e meter_reading.
+
+```{r echo=TRUE}
+#datisub<-subset(dati[,!(colnames(dati)%in%c("timestamp","building_id","primary_use","meter","meter_reading","day","hour"))])
+datisub<-subset(dati[,c(2:8,14:16)])
+```
+
+## Stima della Correlazione tra le variabili {#sec-stima-della-correlazione-tra-le-variabili style="color:black"}
+
+Si effettua adesso una stima delle correlazioni tra le variabili al fine di individuare le relazioni tra le variabili, in particolar modo si è interessati all'osservazione del grado di correlazione della variabilie ***log.meter*** rispetto alle altre variabili.
+
+```{r echo=TRUE, paged.print=TRUE}
+matrice_correlazione <- round(cor(datisub),3)
+kable(matrice_correlazione, 
+      format = "html",
+      booktabs = TRUE,
+      method = 'render'
+      )
+```
+
+Dall'osservazione della matrice di correlazione notiamo che la nostra variabile "***log.meter***" è scarsamente correlata con il resto delle variabili eccetto che per le seguenti : ***sq.feet ; floor.count***.
+
+Mentre la variabile atmosferiche tra di loro risultano correlate nel seguente modo :
+
+"***air_temperature***" è altamente correlata positivamente con "***dew_temperature***" (0.815) e moderatamente correlata positivamente con "***wind_speed***" (0.171).
+
+La variabile "***cloud_coverage***" è altamente correlata positivamente con "***precip_depth_1_hr***" (0.904) e negativamente correlata con "***sea_level_pressure***" (-0.347).
+
+La variabile "***dew_temperature***" è altamente correlata positivamente con "***air_temperature***" (0.815) e moderatamente correlata positivamente con "***wind_speed***" (0.086).
+
+La variabile "***precip_depth_1_hr***" è altamente correlata positivamente con "***cloud_coverage***" (0.904) e moderatamente correlata positivamente con "***wind_speed***" (0.747).
+
+La variabile "***sea_level_pressure***" è correlata negativamente con "***cloud_coverage***" (-0.347) e moderatamente correlata negativamente con "***wind_speed***" (-0.333). La variabile "***wind_direction***" ha una correlazione moderata positiva con "***wind_speed***" (0.091).
+
+Le altre correlazioni mostrano le relazioni tra le variabili caratteristiche degli immobili ovvero "***year_built***", "***log.meter***", "***floor.count***", e "***sq.feet***" rispetto alle altre variabili.
+
+Nello specifico, considerando il focus oggetto di studio ovvero la comprensione di come la variabile "***log.meter***" dipende dalle altre variabili osserviamo le correlazioni in ordine decrescente di "***log.meter***" con le altre variabili :
+
+-   "*sq.feet*" con una correlazione di 0.546
+
+-   "*floor.count*" con una correlazione di 0.290
+
+-   "*wind_speed*" con una correlazione di 0.026
+
+-   "*precip_depth_1_hr*" con una correlazione di 0.006
+
+-   "*dew_temperature*" con una correlazione di -0.062
+
+-   "*air_temperature*" con una correlazione di -0.037
+
+-   "*sea_level_pressure*" con una correlazione di -0.015
+
+-   "*year_built*" con una correlazione di -0.102
+
+-   "*cloud_coverage*" con una correlazione di 0.002
+
+-   "*wind_direction*" con una correlazione di -0.002
+
+Al fine di migliorare la comprensione dei dati, si effettua una conversione della variabile superficie: da piedi quadrati in metri quadrati.
+
+```{r echo=TRUE}
+conversion_factor <- 0.092903
+dati$sq.meters <- dati$sq.feet * conversion_factor
+head(dati)
+```
+
+Dalla trasformazione in metriquadri di sq.feet si nota che gli edifici hanno delle dimensioni che variano da 500mq a 9000mq, pertanto è necessario tenerne conto nelle successive fasi di analisi.
+
+```{r echo=TRUE, paged.print=TRUE}
+heatmap(matrice_correlazione, 
+        # Scala dei colori
+        main = "Mappa di Calore della Correlazione")
+
+```
+
+Considerato il focus oggetto di studio ovvero la comprensione di come ***log.meter*** (variabile target) dipende dalle altre variabili (predittori), gli outlier rilevati nelle variabili :air_temperature, cloud_coverage, precip_depth_1_hr, sea_livel_pressure, wind_speed,year_built, log.meter, non dovrebbero penalizzarne lo studio.
+
+------------------------------------------------------------------------
+
+## Analisi delle componenti Principali {style="color:black"}
+
+Effettuo adesso un'analisi delle componenti principali al fine di ridurre la dimensionalità e trasformare un insieme di variabili correlate in un nuovo insieme di variabili non correlate, definite appunto "componenti principali" combinazione lineare delle variabili originarie, ordinate in base all'importanza decrescente, in modo che le prime contengano la maggior parte delle informazioni.
+
+Si effettuata la trasformazione delle variabili categoriche in numeriche al fine di includerle nell'analisi.
+
+```{r echo=TRUE}
+dati$building_id<-as.numeric(building_id)
+dati$day<-as.numeric(day)
+dati$hour<-as.numeric(hour)
+dati$year_built<-as.numeric(year_built)
+dati$meter<-as.numeric(meter)
+str(dati)
+
+```
+
+Standardizzazione dei dati, in modo da avere tutti i dati con media zero e deviazione standard unitaria
+
+```{r}
+#autovalori 
+zdati <- datisub
+zdati<- scale(zdati) # si effettua uno scale dei dati.
+summary(zdati) # ci accertiamo che le variabili abbiano media 0 e varianza unitaria
+
+```
+
+Stima degli autovalori, indicatori chiave che aiutano a capire quanto contribuisce alla varianza totale ciascuna componente principale.
+
+```{r echo=TRUE}
+autov=eigen(cor(zdati))
+autov$values
+```
+
+```{r echo=TRUE}
+#utilizzo il package factoextra
+res.pca<-prcomp(datisub,scale. = TRUE) #utilizzo il subset precedente ed imposto lo scale a TRUE anche se i dati sono stati già normalizzati
+eig.val<-get_eigenvalue(res.pca)
+eig.val
+```
+
+Si osservi come la percentuale di varianza espressa da ciascun autovalore decresce.
+
+```{r paged.print=TRUE}
+fviz_eig(res.pca) #grafico dei residui
+
+```
+
+si osservino quindi le variabili contenute nelle componenti principali ed il relativo contributo.
+
+```{r}
+fviz_pca_var(res.pca,col.var = "contrib", gradient.cols= c("#00AFBB","#E7B800","#FC4E07"),repel = TRUE) #grafico delle variabili
+
+```
+
+I successivi plot esplicitano il contributo di ciascuna variabile nelle due componenti principali.
+
+```{r echo=TRUE}
+fviz_contrib(res.pca, choice = "var", axes = 1, top=10)
+fviz_contrib(res.pca, choice = "var", axes = 2, top=10)
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top=10)
+```
+
+Si osservi che le variabili che danno il maggior contributo sono quelle che stanno sopra la linea rossa, che indica il contributo medio, ovvero :***sq.feet -log.meter-floor.count- precip_depth_1_hr - cloud_coverage - wind_speed.***
+
+Si individua adesso il contributo espresso da ogni autovalore e la relativa percentuale di varianza espressa.
+
+```{r echo=TRUE}
+eig.val<-get_eigenvalue(res.pca)
+eig.val
+```
+
+|                                                                                                                                                                                 |
+|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *`Individuate le variabili che danno il maggior contributo alla spiegazione della varianza in un modello lineare, passiamo all'individuazione di un modello lineare ottimale.`* |
+
+## Analisi Regressione Lineare {style="color:black"}
+
+Considerato il focus dell'analisi assegnata ovvero : ***la comprensione di come log.meter (variabile target) dipende dalle altre variabili (predittori),*** gli studi precedenti, sia in termini di correlazione che sulle componenti principali si inizia con l'analisi della la relazione tra più evidente tra ***log.meter*** e ***sq.feet***
+
+**Mod.(l1)**
+
+```{r}
+
+MLA.boxplot(log.meter,sq.feet,pch=".")
+
+```
+
+Com'era normale attendersi si nota una relazione lineare positiva tra il consumo di energia e l'aumento della superficie, la retta blu rappresenta la reta di regressione, mentre quella rossa la curva di regressione non parametrica ovvero quel modello non analitico che cerca di seguire al meglio le osservazioni, più queste due sono vicine e più c'è una relazione lineare tra le variabili.
+
+Si osservino i dati riepilogativi del modello.
+
+```{r}
+lm1=lm(log.meter~sq.feet,data=dati)
+summary(lm1)
+AIC(lm1)
+```
+
+Il modello lineare appena rappresentato, esprime la relazione tra la variabile Y= log.meter e X=sq.feet
+
+Y = Xβ + ε
+
+log.meter = 3.248+ sq.feet\*1,767\^(-5)
+
+Questo modello eprime il **29,85%** di varianza, inoltre il *t value* dello stimatore, calcolato rispetto alla variabile sq.feet e significativamente diverso da zero pertanto la variabile è statisticamente significativa.
+
+Quando di si considerano diversi modelli ed si vuole valutare il modello ottimale in termini di complessità e livello di adattamento (fitting), l'AIC score, rappresenta una misura della bontà di adattamento del modello ed è utile per confrontare diversi modelli, poichè in breve meglio rappresenta la distribuzione degli errori residui.
+
+Si preferisce solitamente il modello con l'AIC più basso, poiché offre una buona adattabilità con una complessità minima. In questo caso l'AIC è pari a : **1.554.354**
+
+Il grafico sottostante rappresenta la distribuzione dei residui, i quali dovrebbero equidistribuirsi sopra e sotto la retta y=0
+
+```{r}
+plot(lm1,1, pch='.')
+```
+
+Si osservi adesso la relazione tra ***log.meter*** e ***floor.count***
+
+**Mod.(l2)**
+
+```{r}
+MLA.boxplot(log.meter,floor.count,pch=".")
+```
+
+```{r}
+lm2=lm(log.meter~floor.count,data=dati)
+summary(lm2)
+AIC(lm2)
+```
+
+I risultati ottenuti mostrano una percentuale di varianza espressa pari 8.41% ed uno score AIC maggiore, pertanto peggiorato, si ricordi che il modello con l'AIC più basso fornisce un migliore adattamento ai dati con meno complessità di variabili.
+
+Si provi, dunque, a ricercare un modello migliore introducendo una seconda variabile "***dew.temperature***",inoltre essendo molto vasta la scala della variabile "***sq.feet***" se ne consideri il logaritmo.
+
+```{r}
+plot
+MLA.regression3d(dati[,c(16,4,14)])
+	
+```
+
+```{r}
+lm2=lm(log.meter~log(sq.feet)+dew_temperature,data=dati)
+summary(lm2)
+AIC(lm1)
+```
+
+Si noti che il contributo al coefficente di determinazione multipla "R-squared" non è aumentato sensibilmente, inoltre anche lo stimatore t-value è sensibilmente piccolo,pertanto effettuo un esplorazione successiva introducendo delle varibili fattoriali.
+
+**Mod(l3)**
+
+```{r}
+l3=lm(log.meter~sq.feet+primary_use,data=dati)
+summary(l3)
+AIC(l3)
+```
+
+L'introduzione della variabile primary_use ha portato ad un sensibile miglioramento del modello, sia in termini di Varianza espressa che riduzione dell'indice AIC.
+
+Si provi adesso ad effettuare una stima del modello introducendo tutte le variabili indipendenti e successivamente attraverso la tecnica "backward selection" si stimano tutti i modelli i-esimi eliminando di volta in volta la variabile meno significativa, ovvero con il p-value più alto e il t-value più piccolo.
+
+**Mod.(l17)**
+
+```{r}
+l17=lm(log.meter~log(sq.feet)+primary_use+floor.count+air_temperature+cloud_coverage+dew_temperature+precip_depth_1_hr+sea_level_pressure+wind_direction+wind_speed+meter+as.factor(day%%7)+as.factor(hour), data=dati)
+summary(l17)
+AIC(l17)
+```
+
+In questo modello, computazionalmente elaborato, considerando tutte le varibili indipendenti numeriche ed le variabili fattoriali data, ora, e primary_use; otteniamo una percentuale di varianza espressa pari a 44.95% ed uno score di AIC pari a 1430083.
+
+```{r}
+library(leaps)
+mod_back=regsubsets(log.meter~log(sq.feet)+primary_use+floor.count+air_temperature+cloud_coverage+dew_temperature+precip_depth_1_hr+sea_level_pressure+wind_direction+wind_speed+meter+as.factor(day%%7)+as.factor(hour), data=dati, nvmax = 13, method = "backward")
+summary(mod_back)
+summary(mod_back)$adjr2
+```
+
+Se si considera l'andamento delle percentuali di varianza espressa, il modello migliore risulta essere quello a 6 predittori.
+
+Effettuando una stima dei modelli attraverso il metodo backward analisys non otteniamo valori soddisfacenti pertanto, si passa ad un ulteriore esplorazione considerando le variabili fattoriali : ***year_built*** e ***primary_use.***
+
+**Mod.(l5)**
+
+```{r}
+l5=lm(log.meter~log(sq.feet)+primary_use+year_built+day+hour,data=dati)
+summary(l5)
+AIC(l5)
+```
+
+Il modello appena analizzato, seppur con meno variabili introdotte, ha delle prestazioni migliori in termini di varianza espressa e **AIC score**, quindi provo ad introdurre un ulteriore variabile fattoriale che identifica univocamente l'immobile ovvero la variabile building_id.
+
+```{r}
+l17=lm(log.meter~log(sq.feet)+as.factor(primary_use)+floor.count+air_temperature+cloud_coverage+dew_temperature+precip_depth_1_hr+sea_level_pressure+wind_direction+wind_speed+meter+as.factor(building_id)+as.factor(day%%7)+as.factor(hour),data=dati)
+summary(l17)
+AIC(l17)
+```
+
+Il modello appena elaborato, sicuramente complesso, considerate tutte le variabili a disposizione ottiene un AIC Score significativamente basso, ed un percentuale di varianza espressa pari a 74.64%, quindi un significativo miglioramento del modello, il chè suggerisce di effettuare un analisi basata sulla storicità degli immobili.
+
+Si consideri pertanto il seguente modello. :
+
+```{r}
+l20=lm(log.meter~as.factor(building_id)+day+hour,data=dati)
+summary(l20)
+AIC(l20)
+```
+
+Il risultato ottenuti dal modello basato sullo storico dei consumi giornalieri ed orari dell'immobile esprime una percentuale di varianza pari al 73.5% ed uno Score AIC di poco peggiore rispetto al modello complessivo in cui si tenevano conto tutte le variabili a disposizione,
+
+Quindi si consideri la seguente espressione :
+
+``` formula
+log.meter = 4.226551+bi*building_id) + bj*day +bn*hour
+  
+```
+
+## Validazione del modello lineare
+
+Si effettua adesso una validazione dei modelli individuati attraverso la tecnica K-fold Cross-Validation
+
+Si utilizza il package "caret" utilizzando i seguenti parametri: si suddivide il dataframe in k=52 fold che rappresenteranno il dataset di traning,quindi su 52 fold di dimensione superiore al 75% del dataset originario un fold verrà "addestrato" con il modello scelto.
+
+```{r}
+Model_l20=lm(log.meter~as.factor(building_id)+day+hour,data=dati) #modello da validare
+control <- trainControl(method = "cv", number = 52) #train
+#View(control)
+results <- train(log.meter~as.factor(building_id)+day+hour,data=dati, method = "lm", trControl = control) 
+print(results)
+```
+
+L'errore medio quadratico stimato rispetto ai valori reali è pari al 68%, mentre la percentuale di varianza espressa è pari al 73%. Mentre l'errore medio assoluto è pari al 42%.
+
+Si effettua anche la validazione anche del modello con tutte le variabili.
+
+```{r}
+Model_l17=lm(log.meter~log(sq.feet)+as.factor(primary_use)+floor.count+air_temperature+cloud_coverage+dew_temperature+precip_depth_1_hr+sea_level_pressure+wind_direction+wind_speed+meter+as.factor(building_id)+as.factor(day%%7)+as.factor(hour),data=dati)
+control <- trainControl(method = "cv", number = 52) #train
+#View(control)
+results <- train(log.meter~log(sq.feet)+as.factor(primary_use)+floor.count+air_temperature+cloud_coverage+dew_temperature+precip_depth_1_hr+sea_level_pressure+wind_direction+wind_speed+meter+as.factor(building_id)+as.factor(day%%7)+as.factor(hour), data=dati, method = "lm", trControl = control) 
+print(results)
+```
+
+L'errore medio quadratico sui dati reali è pari al 66%, la percentuale di varianza espressa è pari al 74% mentre l'errore medio assoluto è pari al 40%.
+
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\--
+
+## Indagini statistiche varie.
+
+Si analizza la relazione tra ***log.met***er e **year_built** utilizzando un grafico
+
+```{r}
+MLA.boxplot(log.meter,year_built,pch=".",facwidth=6,lines0 = FALSE)
+
+```
+
+Si stima adesso il modello lineare considerando la variabile year_built dipendente dalla variabile sq.feet in quanto è necessario tenere conto anche dell'aspetto principale emerso ovvero la dimensione degli edifici rappresentata dalla variabile sq.feet.
+
+```{r}
+l21=lm(log.meter~as.factor(year_built)/log(sq.feet)+as.factor(day%%7)+hour,data=dati)
+summary(l21)
+AIC(l21)
+```
+
+Sembra che tendenzialmente gli edifici più recenti abbiano un consumo più basso.
+
+Si osservino adesso la media dei consumi giornalieri
+
+```{r paged.print=TRUE}
+daily_mean <- aggregate(log.meter ~ day, data = dati, mean)
+plot(daily_mean$day, daily_mean$log.meter, type = "l", xlab = "Giorno", ylab = "Media log.meter")
+abline(v = 70, col = "blue", lty = 1)  # Linea verticale in blu, con un trattino
+abline(v = 260, col = "red", lty = 1)  # Linea verticale in blu, con un trattino
+
+```
+
+Si nota una sensibile riduzione dei consumi nei giorni che vanno da marzo a fine maggio, quindi restano stabili fino a settembre in cui riprendono a salire.
+
+Si analizza il consumo medio aggregato per primary_use
+
+```{r}
+primary_use_mean <- aggregate(log.meter ~ primary_use, data = dati, mean)
+barplot(primary_use_mean$log.meter, names.arg = primary_use_mean$primary_use, 
+        xlab = "Primary_use", ylab = "log.meter", col = "blue", 
+        main = "Consumo Medio per primary_use", las=2)
+
+```
+
+```{r}
+
+
+# Calcola la media dei consumi giornalieri raggruppati per "day" e "primary_use"
+daily_mean <- aggregate(log.meter ~ day + as.factor(primary_use), data = dati, mean)
+
+# Crea un grafico tridimensionale
+plot_3d <- plot_ly(data = datisub, x = ~primary_use, y = ~day, z = ~log.meter, type = "mesh3d")
+
+# Personalizza l'aspetto del grafico
+plot_3d <- plot_3d %>%
+  layout(scene = list(xaxis = list(title = "Giorno"),
+                      yaxis = list(title = "Primary Use"),
+                      zaxis = list(title = "Media log.meter")))
+
+# Visualizza il grafico
+plot_3d
+
+```
+
+## Conclusioni
+
+In definitiva dalle analisi effettuate sul dataset fornito, considerato il focus principale dello studio, ovvero la comprensione di come la variabile ***log.meter*** dipendesse dalle altre variabili è possibile affermare che senza alcun dubbio la variabile target:***log.meter*** dipende linearmente dalla dimensione dell'edificio, ***sq.feet*** la quale è molto correlata positivamente con il numero di piani dell'edificio ***floor.count***.
+
+Tuttavia la conoscenza di queste variabili indipendenti non è sufficiente a stimare in maniera apprezzabile la variabile ***log.meter***, poichè la percentuale di varianza espressa non è soddisfacente.
+
+Un significativo miglioramento si ottiene utilizzando tutti i predittori a disposizione, tuttavia risulta un modello sufficientemente complesso, pertanto le ulteriori esplorazioni sulle variabili hanno portato alla definizione di un modello basato sulla storicità del building.
+
+infatti, il modello ottimale è rappresentato dalla seguente espressione: ***Mod_l20=lm(log.meter\~as.factor(building_id)+day+hour,data=dati)***
+
+ovvero : ***log.meter = 4.226551+bi\*building_id) + bj\*day +bn\*hour***
+
+Questo modello consente quindi di stimare con sufficiente approssimazione, il valore futuro di log.meter essendo noti il building, il giorno e l'ora.
+
+Si è anche visto che tendenzialmente gli edifici più recenti hanno un consumo medio più basso, quindi risultano più efficienti in termini energetici.
+
+Il consumo medio giornaliero aggregato invece, fa evidenziare un tendenziale comportamento nel tempo, ovvero nei mesi che vanno da marzo a fine maggio si riducono, quindi restano stabili fino a settembre in cui riprendono a salire.
+
+Inoltre, tra tutte le categorie di immobili osservate, la categoria che ha il maggior consumo di energia elettrica è pari agli edifici di tipo "Education".
