@@ -76,3 +76,19 @@ The dataset consists of sales records from multiple stores for a specific time p
 ---
 
 ### 📁 Project Structure
+
+📂 SuperKart_Sales_Prediction
+│── 📜 SuperKart_Sales_Prediction.ipynb  # Jupyter Notebook with full analysis
+│── 📊 SuperKart_Sales_Prediction.pdf    # Project summary & visualizations
+│── 📜 README.md                          # Project documentation
+│── 📊 Data/                              # Dataset (if applicable)
+│── 📜 requirements.txt                   # Dependencies
+---
+## 📧 Contact & Contributions
+- Author: **Agostino Fontana**
+- Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+---
+
+🚀 *If you found this project useful, feel free to ⭐ the repository!* 😊
+
