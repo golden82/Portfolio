@@ -10,7 +10,7 @@ Benvenuto nel mio portfolio progetti! 🚀 Qui troverai una selezione di progett
 2. **[Analisi delle transazioni e turismo](#)** - Analisi esplorativa sui movimenti turistici attraverso dati transazionali.
 3. **[Web Scraping dei prezzi immobiliari su Idealista](#)** - Raccolta e analisi dei dati di prezzo degli immobili a Verona tramite scraping.
 
-➡️ **Vedi tutti i progetti nel repository: [link al repository](#)**
+➡️ **Vedi tutti i progetti nel repository: [link al repository](#)**https://github.com/golden82/Portfolio/tree/3be1ed4cc94f2f5a090fa3a792f62d36f7e48eda/progetti
 
 ---
 
